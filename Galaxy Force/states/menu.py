@@ -6,7 +6,7 @@ import pygame
 pygame.init()
 pygame.mixer.init()
 pygame.mixer.music.load("sounds/background_music.mp3")
-pygame.mixer.music.play(-1)
+
 
 def MENU(screen, player, effects_surface, clock, volume_bkmusic):
     target_volume = 0.1

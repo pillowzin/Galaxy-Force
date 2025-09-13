@@ -23,6 +23,7 @@ enemy_bullets = []
 damage_texts = []
 player_death = None
 player_death_timer = 0
+game_start_timer = 0
 
 def PLAYING(
     screen, player, enemies,
@@ -57,9 +58,7 @@ def PLAYING(
         if player_death_timer >= 1000:
             player_death = None
             player_death_timer = 0
-            bullets.clear()
-            enemy_bullets.clear()
-            return "preparar", stage, bullet_cooldown, 0
+            return "game_over", stage, bullet_cooldown, game_start_timer
         return "jogando", stage, bullet_cooldown, game_start_timer
 
     # --- Player vivo ---
@@ -83,6 +82,7 @@ def PLAYING(
                 enemy.draw(screen)
                 enemy.draw_health_bar(screen)
             else:
+                # marca como morto e dispara a explosão apenas 1 vez
                 if not getattr(enemy, 'dead', False):
                     enemy.dead = True
                     explosions.append(
@@ -92,6 +92,7 @@ def PLAYING(
                             explosion_spritesheet
                         )
                     )
+                continue
         else:
             if player.rect.colliderect(enemy.rect):
                 player.vida -= 10
@@ -111,13 +112,15 @@ def PLAYING(
         for enemy in enemies[:]:
             if bullet.collide(enemy):
                 if isinstance(enemy, Boss):
-                    enemy.take_damage(10)
-                    damage_texts.append(DamageText(enemy.rect.centerx, enemy.rect.top, "-10", target=enemy))
-                    if enemy.vida <= 0:
+                    if enemy.alive:
+                        enemy.take_damage(10)
+                        damage_texts.append(DamageText(enemy.rect.centerx, enemy.rect.top, "-10", target=enemy))
+                    # **não remove imediatamente**; deixa o boss 'morto' na lista até a explosão terminar
+                    if not enemy.alive and getattr(enemy, 'dead', False):
+                        # quando o boss já explodiu, aí sim remove
                         enemies.remove(enemy)
-                        bullets.clear()
-                        enemy_bullets.clear()
                         return "game_complete", stage, bullet_cooldown, game_start_timer
+
                 else:
                     enemies.remove(enemy)
                 player.pontos += 1
@@ -157,7 +160,7 @@ def PLAYING(
 
     # --- HUD ---
     draw_hud(screen, player, stage, points_font, stage_font)
-
+    
     # --- Fases ---
     if len(enemies) == 0 and not waiting_next_stage and len(explosions) == 0:
         waiting_next_stage = True
@@ -171,10 +174,9 @@ def PLAYING(
             player.vida = min(player.vida + 20, 100)
             enemies.clear()
             enemies.extend(get_inimigos_para_fase(stage))
-            enemy_bullets.clear()
             for enemy in enemies:
                 enemy.speed += 2 * stage // 2
-
+    
     if player.vida > 100:
         player.vida = 100
 

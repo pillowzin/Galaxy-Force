@@ -10,6 +10,7 @@ from states.menu import MENU
 from states.playing import PLAYING
 from states.game_over import GAMEOVER
 from states.game_complete import GAME_COMPLETE
+from objects.boss import Boss
 import states.playing as playing
 
 pygame.init()
@@ -47,9 +48,12 @@ fade_duration = 5000
 pygame.mixer.music.load("sounds/background_music.mp3")
 pygame.mixer.music.set_volume(volume_bkmusic)
 
+# --- Boss delay ---
+boss_death_time = None
+boss_death_delay = 1500  # ms de espera antes do game complete
+
 # --- Loop principal ---
 while True:
-    player.vida = 1000
     screen.fill((0, 0, 0))
     dt = clock.tick(60)
     keys = pygame.key.get_pressed()
@@ -82,10 +86,13 @@ while True:
             player.vida = 100
             player.pontos = 0
             game_start_timer = 0
+            boss_death_time = None
             game_state = 'preparar'
 
     # --- Preparar / Tela Pronto ---
     elif game_state == 'preparar':
+        bullets.clear()
+        playing.enemy_bullets.clear()
         game_state, stage, bullet_cooldown, game_start_timer = PLAYING(
             screen, player, enemies, bullets, stage, keys,
             bullet_cooldown, explosion_spritesheet, explosions, clock,
@@ -104,27 +111,38 @@ while True:
             preparing=False, game_start_timer=game_start_timer
         )
 
+        # --- Verifica se o boss morreu e registra tempo ---
+        if any(isinstance(e, Boss) and not e.alive for e in enemies):
+            if boss_death_time is None:
+                boss_death_time = pygame.time.get_ticks()
+
+        # --- Se já passou o delay após a morte do boss ---
+        if boss_death_time:
+            if pygame.time.get_ticks() - boss_death_time >= boss_death_delay:
+                game_state = 'game_complete'
+                boss_death_time = None
+
     # --- Game Over ---
     elif game_state == 'game_over':
         game_state, player, enemies, bullets, stage = GAMEOVER(
             screen, player, enemies, bullets, stage, keys
         )
-        # Reseta balas e timer antes de preparar de novo
         if game_state == 'preparar':
             bullets.clear()
             playing.enemy_bullets.clear()
             game_start_timer = 0
+            boss_death_time = None
 
     # --- Game Complete ---
     elif game_state == 'game_complete':
         game_state, player, enemies, bullets, stage = GAME_COMPLETE(
             screen, player, enemies, bullets, stage, keys
         )
-        # Reseta balas e timer antes de preparar de novo
         if game_state == 'preparar':
             bullets.clear()
             playing.enemy_bullets.clear()
             game_start_timer = 0
+            boss_death_time = None
 
     # --- Fade ---
     if fade_alpha > 0:
