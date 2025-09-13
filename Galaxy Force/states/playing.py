@@ -1,5 +1,5 @@
 import pygame
-from const import wdt, hgt, MAX_STAGE
+from const import wdt, hgt
 from mechanics.enemyFactory import get_inimigos_para_fase
 from objects.bullet import Bullet
 from objects.boss import Boss
@@ -23,27 +23,31 @@ enemy_bullets = []
 damage_texts = []
 player_death = None
 player_death_timer = 0
-game_start_timer = 0
-start_delay = 1000  # espera inicial
 
 def PLAYING(
     screen, player, enemies,
     bullets, stage, keys,
     bullet_cooldown, explosion_spritesheet,
-    explosions, clock
+    explosions, clock,
+    preparing=False, game_start_timer=0
 ):
     global waiting_next_stage, waiting_start_time, enemy_bullets
-    global damage_texts, player_death, player_death_timer, game_start_timer
+    global damage_texts, player_death, player_death_timer
 
     pygame.mouse.set_visible(False)
 
-    # --- Espera inicial ---
-    if game_start_timer < start_delay:
+    # --- Tela Pronto ---
+    start_delay = 1000
+    if preparing:
         game_start_timer += clock.get_time()
         ready_font = pygame.font.Font("misc/PressStart2P-Regular.ttf", 24)
         ready_text = ready_font.render("Pronto?", True, (255, 255, 0))
         screen.blit(ready_text, (wdt//2 - ready_text.get_width()//2, hgt//2 - 20))
-        return "jogando", stage, bullet_cooldown
+
+        if game_start_timer >= start_delay:
+            bullet_cooldown = 0
+            return "jogando", stage, bullet_cooldown, game_start_timer
+        return "preparar", stage, bullet_cooldown, game_start_timer
 
     # --- Player morreu ---
     if player_death:
@@ -53,8 +57,10 @@ def PLAYING(
         if player_death_timer >= 1000:
             player_death = None
             player_death_timer = 0
-            return "game_over", stage, bullet_cooldown
-        return "jogando", stage, bullet_cooldown
+            bullets.clear()
+            enemy_bullets.clear()
+            return "preparar", stage, bullet_cooldown, 0
+        return "jogando", stage, bullet_cooldown, game_start_timer
 
     # --- Player vivo ---
     player.update()
@@ -105,11 +111,13 @@ def PLAYING(
         for enemy in enemies[:]:
             if bullet.collide(enemy):
                 if isinstance(enemy, Boss):
-                    enemy.take_damage(10)  # chama piscada e reduz vida
+                    enemy.take_damage(10)
                     damage_texts.append(DamageText(enemy.rect.centerx, enemy.rect.top, "-10", target=enemy))
                     if enemy.vida <= 0:
                         enemies.remove(enemy)
-                        return "game_complete", stage, bullet_cooldown  # termina o jogo aqui
+                        bullets.clear()
+                        enemy_bullets.clear()
+                        return "game_complete", stage, bullet_cooldown, game_start_timer
                 else:
                     enemies.remove(enemy)
                 player.pontos += 1
@@ -149,13 +157,12 @@ def PLAYING(
 
     # --- HUD ---
     draw_hud(screen, player, stage, points_font, stage_font)
-    
+
     # --- Fases ---
     if len(enemies) == 0 and not waiting_next_stage and len(explosions) == 0:
         waiting_next_stage = True
         waiting_start_time = pygame.time.get_ticks()
 
-    # desenha efeito de next fase sem parar o jogo
     if waiting_next_stage:
         acabou = draw_stage_cleared(screen, waiting_start_time, player.rect.y)
         if acabou:
@@ -164,11 +171,11 @@ def PLAYING(
             player.vida = min(player.vida + 20, 100)
             enemies.clear()
             enemies.extend(get_inimigos_para_fase(stage))
+            enemy_bullets.clear()
             for enemy in enemies:
                 enemy.speed += 2 * stage // 2
-    
-    # Limita vida
+
     if player.vida > 100:
         player.vida = 100
 
-    return "jogando", stage, bullet_cooldown
+    return "jogando", stage, bullet_cooldown, game_start_timer
