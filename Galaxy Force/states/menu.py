@@ -4,14 +4,29 @@ from random import randint
 
 pygame.mixer.init()
 pygame.font.init()
-volume_bkmusic = 0.1
+
+# --- Volume fade ---
+volume_bkmusic = 0.0
+target_volume = 0.1   # volume máximo desejado
+fade_duration = 5000  # fade in em 5 segundos
+
 pygame.mixer.music.load("sounds/background_music.mp3")
 pygame.mixer.music.set_volume(volume_bkmusic)
 
-def MENU(screen, player, effects_surface):
+def MENU(screen, player, effects_surface, clock):
+    global volume_bkmusic
+
+    # --- toca música se não estiver tocando ---
     if not pygame.mixer.music.get_busy():
         pygame.mixer.music.play(-1)
 
+    # --- fade in ---
+    dt = clock.get_time()  # tempo desde o último frame em ms
+    increment = (target_volume / fade_duration) * dt
+    volume_bkmusic = min(target_volume, volume_bkmusic + increment)
+    pygame.mixer.music.set_volume(volume_bkmusic)
+
+    # --- desenho do menu ---
     def MainMenu():
         nonlocal effects_surface
         title_font = pygame.font.Font("misc/PressStart2P-Regular.ttf", 36)
@@ -59,4 +74,3 @@ def MENU(screen, player, effects_surface):
 
     MainMenu()
     return effects_surface
-

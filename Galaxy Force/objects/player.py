@@ -13,7 +13,7 @@ class Player:
         self.rect = self.img.get_rect()
         self.mask = pygame.mask.from_surface(self.img)
         self.pontos = 0
-        self.vida = 100000000000000000
+        self.vida = 100
         self.laser_sound = pygame.mixer.Sound("sounds/laser_shoot.mp3")
         self.laser_sound.set_volume(0.2)
 

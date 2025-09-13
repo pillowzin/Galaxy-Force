@@ -105,10 +105,11 @@ def PLAYING(
         for enemy in enemies[:]:
             if bullet.collide(enemy):
                 if isinstance(enemy, Boss):
-                    enemy.vida -= 10
+                    enemy.take_damage(10)  # chama piscada e reduz vida
                     damage_texts.append(DamageText(enemy.rect.centerx, enemy.rect.top, "-10", target=enemy))
                     if enemy.vida <= 0:
                         enemies.remove(enemy)
+                        return "game_complete", stage, bullet_cooldown  # termina o jogo aqui
                 else:
                     enemies.remove(enemy)
                 player.pontos += 1

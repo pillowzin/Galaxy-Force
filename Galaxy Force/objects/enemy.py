@@ -1,4 +1,5 @@
 import pygame
+import math
 from const import wdt, hgt
 from random import randint
 
@@ -22,6 +23,7 @@ class Enemy:
 
         self.wobble_direction = 1
         self.wobble_count = 0
+        self.wobble_target_x = self.x
 
         # tempo até o fim do piscar (timestamp)
         self.hit_until = 0
@@ -35,18 +37,25 @@ class Enemy:
 
 
     def move(self):
-        self.y += self.speed
+        # desce normalmente + oscilação senoidal
+        self.y += self.speed + math.sin(pygame.time.get_ticks() * 0.01) * 2  # amplitude 2px, ajuste se quiser mais
 
+        # escolhe novo alvo horizontal a cada 40 ticks
         self.wobble_count += 1
         if self.wobble_count >= 40:
-            self.wobble_direction *= -1
             self.wobble_count = 0
+            # alvo aleatório mais distante
+            self.wobble_target_x = self.x + randint(-50, 50)
+            self.wobble_target_x = max(self.margem_x, min(self.wobble_target_x, wdt - self.margem_x - self.frame_width))
 
-        self.x += self.wobble_direction * 2
-        self.x = max(self.margem_x, min(self.x, wdt - self.margem_x - self.frame_width))
+        # aproxima suavemente do alvo
+        self.x += (self.wobble_target_x - self.x) * 0.15  # suavidade maior → movimento mais fluido
 
+        # respawn no topo com x aleatório e wobble inicial aleatório
         if self.y >= hgt:
             self.y = -100
+            self.x = randint(self.margem_x, wdt - self.margem_x - self.frame_width)
+            self.wobble_target_x = self.x
 
         self.rect.topleft = (self.x, self.y)
         self.update_animation()

@@ -1,3 +1,7 @@
+#IGNORAR O AVISO AVX - não é bug.
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
 import pygame
 from const import wdt, hgt
 from objects.player import Player
@@ -34,6 +38,10 @@ explosion_spritesheet = pygame.image.load('sprites/explosion.png').convert_alpha
 explosions = []
 stars = [Star() for _ in range(50)]
 
+fade_alpha = 255 #fade in ao iniciar
+fade_surface = pygame.Surface((wdt, hgt))
+fade_surface.fill((0, 0, 0))
+
 # --- Loop principal ---
 while True:
     screen.fill((0, 0, 0))
@@ -51,7 +59,7 @@ while True:
 
     # --- Menu ---
     if game_state == 'menu':
-        effects_surface = MENU(screen, player, effects_surface)
+        effects_surface = MENU(screen, player, effects_surface, clock)
         if keys[pygame.K_SPACE]:
             game_state = 'jogando'
 
@@ -77,5 +85,10 @@ while True:
         game_state, player, enemies, bullets, stage = GAME_COMPLETE(
             screen, player, enemies, bullets, stage, keys
         )
+
+    if fade_alpha > 0:
+        fade_surface.set_alpha(fade_alpha)
+        screen.blit(fade_surface, (0,0))
+        fade_alpha -= 5  # ajusta a velocidade do fade
 
     pygame.display.flip()
