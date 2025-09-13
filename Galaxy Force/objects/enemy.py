@@ -23,6 +23,9 @@ class Enemy:
         self.wobble_direction = 1
         self.wobble_count = 0
 
+        # tempo até o fim do piscar (timestamp)
+        self.hit_until = 0
+
 
     def update_animation(self):
         self.frame_counter += 1
@@ -49,6 +52,11 @@ class Enemy:
         self.update_animation()
 
 
+    def take_damage(self, dmg=1):
+        # seta até quando piscar
+        self.hit_until = pygame.time.get_ticks() + 200  # piscar por 200 ms
+
+
     def draw(self, screen):
         frame_rect = pygame.Rect(
             self.current_frame * self.frame_width,
@@ -59,5 +67,13 @@ class Enemy:
 
         frame_img = self.sprite_sheet.subsurface(frame_rect)
         frame_img = pygame.transform.rotate(frame_img, 180)
-        screen.blit(frame_img, (self.x, self.y))
 
+        now = pygame.time.get_ticks()
+        if now < self.hit_until:
+            if (now // 100) % 2 == 0:
+                tmp = frame_img.copy()
+                tmp.fill((255, 50, 50), special_flags=pygame.BLEND_RGB_ADD)
+                screen.blit(tmp, (self.x, self.y))
+                return
+
+        screen.blit(frame_img, (self.x, self.y))
